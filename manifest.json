@@ -1,0 +1,16 @@
+{
+  "name": "キャンセルFAX便",
+  "short_name": "キャンセルFAX",
+  "description": "八寸町倉庫のキャンセル分をヤマト運輸へ配達中止依頼するFAXを1件1枚で作成",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#0b5d3b",
+  "lang": "ja",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
