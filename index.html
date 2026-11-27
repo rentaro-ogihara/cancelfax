@@ -78,6 +78,15 @@ details summary{cursor:pointer;font-weight:bold}
 .s-box td.v{font-size:15pt;font-weight:bold;line-height:1.45;word-break:break-all}
 .s-box td.v.tno{font-family:"Arial Black",Arial,sans-serif;font-size:26pt;letter-spacing:.06em}
 .s-box td.v.small{font-size:12pt;font-weight:normal}
+/* パンチ穴の目印（カール KCP-11：穴径6mm・間隔80mm・端から中心12mm） */
+.punch{position:absolute;left:9mm;width:6mm;height:6mm;border:0.3mm dashed #000;border-radius:50%}
+.punch::before,.punch::after{content:"";position:absolute;background:#000}
+.punch::before{left:50%;top:1.5mm;bottom:1.5mm;width:0.2mm;margin-left:-0.1mm}
+.punch::after{top:50%;left:1.5mm;right:1.5mm;height:0.2mm;margin-top:-0.1mm}
+.punch.p1{top:105.5mm}.punch.p2{top:185.5mm}
+.punch-c{position:absolute;left:5mm;top:148.5mm;width:12mm;height:0;border-top:0.4mm solid #000}
+.punch-c::before{content:"";position:absolute;left:-0.2mm;top:-1.6mm;border-left:2.4mm solid #000;border-top:1.4mm solid transparent;border-bottom:1.4mm solid transparent}
+.punch-c span{position:absolute;left:3mm;top:1mm;font-size:6pt;line-height:1;white-space:nowrap}
 .s-foot{position:absolute;left:20mm;right:18mm;bottom:10mm;font-size:8.5pt;display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:1.5mm}
 /* 画面プレビュー */
 #preview .sheet{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);margin:0 auto 14px;transform-origin:top left}
@@ -337,6 +346,7 @@ function sheet(r){
   const checks=['至急','校閲用','ご確認ください','ご返信ください','ご回覧ください'];
   const body=esc(S.body).replace(/\{送り状番号\}/g,'<b>'+esc(r.tno)+'</b>');
   return `<div class="sheet">
+    <div class="punch p1"></div><div class="punch p2"></div><div class="punch-c"></div>
     <div class="s-from"><b>${esc(S.fromName)}</b><br>${esc(S.fromAddr)}<br>${esc(S.fromTel)}</div>
     <div class="s-title">fax</div>
     <table class="s-tbl">
