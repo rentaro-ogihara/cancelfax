@@ -77,6 +77,8 @@ details summary{cursor:pointer;font-weight:bold}
 .s-box td.k{width:34mm;font-weight:bold;font-size:11pt;border-right:1px solid #000}
 .s-box td.v{font-size:15pt;font-weight:bold;line-height:1.45;word-break:break-all}
 .s-box td.v.tno{font-family:"Arial Black",Arial,sans-serif;font-size:26pt;letter-spacing:.06em}
+.s-box td.v.tno.multi{font-size:18pt;line-height:1.35}
+.s-box td.v.tno.many{font-size:12pt;line-height:1.4;columns:3;column-gap:6mm;letter-spacing:.02em}
 .s-box td.v.small{font-size:12pt;font-weight:normal}
 /* パンチ穴の目印（カール KCP-11：穴径6mm・間隔80mm・端から中心12mm） */
 .punch{position:absolute;left:9mm;width:6mm;height:6mm;border:0.3mm dashed #000;border-radius:50%}
@@ -215,7 +217,7 @@ const FIELDS=[
   {k:'addr',label:'住所',multi:true},
   {k:'tel',label:'電話番号',multi:false},
 ];
-let MAP=LS.get('cfax.map',null);
+let MAP=LS.get('cfax.map2',null);
 
 function parseCSV(text){
   const out=[];let row=[],f='',q=false;
@@ -242,9 +244,9 @@ function score(h,field){
   switch(field){
     case 'tno': return /(送り状|伝票番号|追跡|問い?合わ?せ番号|問合せ番号|tracking)/i.test(s)? (/(送り状番号|配送伝票番号|伝票番号)/.test(s)?10:6):0;
     case 'order': return /(受注番号|注文番号|受注コード|注文コード|受注ID|order)/i.test(s)? (/受注番号|受注コード/.test(s)?10:6):0;
-    case 'name': return (/(氏名|名前|宛名|^.*名$)/.test(s)&&!/(カナ|フリガナ|ｶﾅ|会社|商品|店舗|ショップ|品名|名義)/.test(s))? (DEST.test(s)?10:2):0;
+    case 'name': return (/(氏名|名前|宛名|名\d?$)/.test(s)&&!/(カナ|かな|フリガナ|ふりがな|ｶﾅ|会社|商品|店舗|ショップ|品名|名義)/.test(s))? (DEST.test(s)?10:2):0;
     case 'zip': return /郵便番号|〒|zip/i.test(s)? (DEST.test(s)?10:2):0;
-    case 'addr': return /(住所|都道府県|市区町村|番地|建物|address)/i.test(s)? (DEST.test(s)?10:2):0;
+    case 'addr': if(/住所$/.test(s)&&DEST.test(s))return 20; return /(住所|都道府県|市区町村|番地|建物|address)/i.test(s)? (DEST.test(s)?10:2):0;
     case 'tel': return /(電話|TEL|tel|phone)/.test(s)&&!/FAX/i.test(s)? (DEST.test(s)?10:2):0;
   }return 0;
 }
@@ -256,13 +258,13 @@ function autoMap(){
     const best=Math.max(...sc.map(x=>x.s));
     let pick=sc.filter(x=>x.s===best).map(x=>x.i);
     if(F.k==='addr'){ /* 住所は同じ優先度の列を全部つなぐ */ }
-    else if(F.k==='name'){ pick=pick.slice(0,2); /* 姓・名が分かれている場合 */ if(pick.length===2 && !/(姓|名$)/.test(headers[pick[0]]))pick=pick.slice(0,1); }
+    else if(F.k==='name'){ pick=pick.slice(0,2); /* 姓・名が分かれている場合 */ if(pick.length===2 && !/(姓|名$|\d$)/.test(headers[pick[0]]))pick=pick.slice(0,1); }
     else pick=pick.slice(0,1);
     m[F.k]=pick;
   });
   return m;
 }
-function sameHeaders(){const h=LS.get('cfax.mapHeaders',null);return h&&h.join('\t')===headers.join('\t')}
+function sameHeaders(){const h=LS.get('cfax.mapHeaders2',null);return h&&h.join('\t')===headers.join('\t')}
 function buildMapUI(){
   const box=$('#mapRows');box.innerHTML='';
   FIELDS.forEach(F=>{
@@ -270,7 +272,7 @@ function buildMapUI(){
     const sel=document.createElement('select');if(F.multi){sel.multiple=true;sel.size=Math.min(5,headers.length+1)}
     if(!F.multi){const o=document.createElement('option');o.value='';o.textContent='（使わない）';sel.appendChild(o)}
     headers.forEach((h,i)=>{const o=document.createElement('option');o.value=i;o.textContent=h||('列'+(i+1));if((MAP[F.k]||[]).includes(i))o.selected=true;sel.appendChild(o)});
-    sel.onchange=()=>{MAP[F.k]=[...sel.selectedOptions].map(o=>o.value).filter(v=>v!=='').map(Number);LS.set('cfax.map',MAP);LS.set('cfax.mapHeaders',headers);};
+    sel.onchange=()=>{MAP[F.k]=[...sel.selectedOptions].map(o=>o.value).filter(v=>v!=='').map(Number);LS.set('cfax.map2',MAP);LS.set('cfax.mapHeaders2',headers);};
     box.append(lab,sel);
   });
   $('#mapBox').hidden=false;
@@ -279,7 +281,10 @@ function val(r,k,sep){return (MAP[k]||[]).map(i=>(r[i]||'').trim()).filter(Boole
 function recFromRow(r){
   return {tno:fmtTno(val(r,'tno')),order:val(r,'order'),name:val(r,'name',' '),zip:fmtZip(val(r,'zip')),addr:val(r,'addr',' '),tel:val(r,'tel')};
 }
-function fmtTno(s){const d=String(s||'').replace(/\D/g,'');return d.length===12?d.replace(/(\d{4})(\d{4})(\d{4})/,'$1-$2-$3'):(s||'').trim()}
+function fmtOne(s){const d=String(s||'').replace(/\D/g,'');return d.length===12?d.replace(/(\d{4})(\d{4})(\d{4})/,'$1-$2-$3'):(s||'').trim()}
+/* 複数個口は「;」区切りで入ってくるので分けて整形し「、」でつなぐ */
+const tnoParts=s=>String(s||'').split(/[;；,，、\/\s]+/).map(x=>x.trim()).filter(Boolean);
+function fmtTno(s){return tnoParts(s).map(fmtOne).join('、')}
 function fmtZip(s){const d=String(s||'').replace(/\D/g,'');return d.length===7?d.slice(0,3)+'-'+d.slice(3):(s||'').trim()}
 const norm=s=>String(s||'').replace(/[‐－―ー\-\s]/g,'').toUpperCase().replace(/[Ａ-Ｚ０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
 
@@ -289,7 +294,7 @@ function loadFile(file){
     const all=parseCSV(decode(fr.result));
     if(all.length<2){msg('#loadMsg','CSVの中身が読み取れませんでした','ng');return}
     headers=all[0].map(h=>h.trim());rows=all.slice(1);
-    if(!MAP||!sameHeaders()){MAP=autoMap();LS.set('cfax.map',MAP);LS.set('cfax.mapHeaders',headers);}
+    if(!MAP||!sameHeaders()){MAP=autoMap();LS.set('cfax.map2',MAP);LS.set('cfax.mapHeaders2',headers);}
     buildMapUI();
     const miss=FIELDS.filter(F=>F.k!=='order'&&!(MAP[F.k]||[]).length).map(F=>F.label);
     msg('#loadMsg',`「${file.name}」を読み込みました（${rows.length}行）`+(miss.length?`　※自動で見つからなかった列：${miss.join('、')} → 下の「列の割り当て」で選んでください`:''),miss.length?'ng':'ok');
@@ -313,7 +318,7 @@ $('#btnFind').onclick=()=>{
   if(!keys.length)return;
   const found=[],notFound=[];
   keys.forEach(k=>{
-    const hit=rows.find(r=>norm(val(r,'tno'))===k||((MAP.order||[]).length&&norm(val(r,'order'))===k));
+    const hit=rows.find(r=>tnoParts(val(r,'tno')).some(t=>norm(t)===k)||((MAP.order||[]).length&&norm(val(r,'order'))===k));
     if(!hit){notFound.push(k);return}
     const rec=recFromRow(hit);
     if(list.some(x=>norm(x.tno)===norm(rec.tno)&&rec.tno))return;
@@ -360,14 +365,14 @@ function sheet(r){
     <div class="s-box">
       <div class="h">配達中止のお荷物</div>
       <table>
-        <tr><td class="k">送り状番号</td><td class="v tno">${esc(r.tno)||'&nbsp;'}</td></tr>
+        <tr><td class="k">送り状番号${tnoParts(r.tno).length>1?`<br><span style="font-weight:normal;font-size:9pt">（${tnoParts(r.tno).length}個口）</span>`:''}</td><td class="v tno ${tnoParts(r.tno).length>1?(tnoParts(r.tno).length>4?'many':'multi'):''}">${tnoParts(r.tno).map(esc).join('<br>')||'&nbsp;'}</td></tr>
         <tr><td class="k">お届け先氏名</td><td class="v">${esc(r.name)||'&nbsp;'} 様</td></tr>
         <tr><td class="k">ご住所</td><td class="v">${r.zip?'〒'+esc(r.zip)+'<br>':''}${esc(r.addr)||'&nbsp;'}</td></tr>
         <tr><td class="k">電話番号</td><td class="v">${esc(r.tel)||'&nbsp;'}</td></tr>
       </table>
     </div>
     <div style="margin-top:4mm;text-align:right">${esc(S.signer)}</div>
-    <div class="s-foot"><span>${esc(S.fromName)}　${esc(S.fromTel)}</span><span>送り状番号 ${esc(r.tno)}</span></div>
+    <div class="s-foot"><span>${esc(S.fromName)}　${esc(S.fromTel)}</span><span>送り状番号 ${esc(tnoParts(r.tno)[0]||'')}${tnoParts(r.tno).length>1?' ほか'+(tnoParts(r.tno).length-1)+'個':''}</span></div>
   </div>`;
 }
 function render(){
